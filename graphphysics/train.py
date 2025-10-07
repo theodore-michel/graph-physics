@@ -11,8 +11,9 @@ from lightning.pytorch.loggers import WandbLogger
 from loguru import logger
 from torch_geometric.loader import DataLoader
 
-from graphphysics.external.aneurysm import build_features
-from graphphysics.training.callback import LogPyVistaPredictionsCallback
+from graphphysics.external.panels import build_features
+
+# from graphphysics.training.callback import LogPyVistaPredictionsCallback
 from graphphysics.training.lightning_module import LightningModule
 from graphphysics.training.parse_parameters import (
     get_dataset,
@@ -47,7 +48,7 @@ flags.DEFINE_bool(
     "resume_training", False, "Whether to resume an unfinished training or not"
 )
 
-flags.DEFINE_bool("use_previous_data", True, "Whether to use previous data or not")
+flags.DEFINE_bool("use_previous_data", False, "Whether to use previous data or not")
 flags.DEFINE_integer(
     "previous_data_start", 4, "Index of the start of the previous data in the features"
 )
@@ -242,7 +243,7 @@ def main(argv):
         callbacks=[
             ColabProgressBar(),
             checkpoint_callback,
-            LogPyVistaPredictionsCallback(dataset=val_dataset, indices=[1, 2, 3]),
+            # LogPyVistaPredictionsCallback(dataset=val_dataset, indices=[1, 2, 3]),
             lr_monitor,
         ],
         log_every_n_steps=100,
