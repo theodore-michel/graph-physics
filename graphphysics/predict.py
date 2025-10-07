@@ -4,11 +4,12 @@ import warnings
 import torch
 from absl import app, flags
 from lightning.pytorch import Trainer
-from lightning.pytorch.loggers import WandbLogger
+
+# from lightning.pytorch.loggers import WandbLogger
 from loguru import logger
 from torch_geometric.loader import DataLoader
 
-import wandb
+# import wandb
 from graphphysics.external.panels import build_features
 from graphphysics.training.lightning_module import LightningModule
 from graphphysics.training.parse_parameters import get_dataset, get_preprocessing
@@ -27,6 +28,7 @@ flags.DEFINE_bool("no_edge_feature", False, "Whether to use edge features")
 flags.DEFINE_string(
     "predict_parameters_path", None, "Path to the training parameters JSON file"
 )
+flags.DEFINE_string("prediction_output_path", "predictions", "Path to save predictions")
 
 
 def main(argv):
@@ -48,7 +50,7 @@ def main(argv):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    wandb_project_name = FLAGS.project_name
+    # wandb_project_name = FLAGS.project_name
     model_path = FLAGS.model_path
     use_edge_feature = not FLAGS.no_edge_feature
 
@@ -87,24 +89,25 @@ def main(argv):
         parameters=parameters,
         trajectory_length=predict_dataset.trajectory_length,
         timestep=predict_dataset.dt,
+        prediction_save_dir=FLAGS.prediction_output_path,
     )
 
     # Initialize WandbLogger
-    wandb_run = wandb.init(project=wandb_project_name)
-    wandb_logger = WandbLogger(experiment=wandb_run)
+    # wandb_run = wandb.init(project=wandb_project_name)
+    # wandb_logger = WandbLogger(experiment=wandb_run)
 
-    wandb_logger.experiment.config.update(
-        {
-            "architecture": parameters["model"]["type"],
-            "#_layers": parameters["model"]["message_passing_num"],
-            "#_neurons": parameters["model"]["hidden_size"],
-            "#_hops": parameters["dataset"]["khop"],
-        }
-    )
+    # wandb_logger.experiment.config.update(
+    #     {
+    #         "architecture": parameters["model"]["type"],
+    #         "#_layers": parameters["model"]["message_passing_num"],
+    #         "#_neurons": parameters["model"]["hidden_size"],
+    #         "#_hops": parameters["dataset"]["khop"],
+    #     }
+    # )
 
     trainer = Trainer(
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        logger=wandb_logger,
+        # logger=wandb_logger,
         devices=1,
         inference_mode=True,
     )
