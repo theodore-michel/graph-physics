@@ -28,7 +28,9 @@ flags.DEFINE_bool("no_edge_feature", False, "Whether to use edge features")
 flags.DEFINE_string(
     "predict_parameters_path", None, "Path to the training parameters JSON file"
 )
-flags.DEFINE_string("prediction_output_path", "predictions", "Path to save predictions")
+flags.DEFINE_string(
+    "prediction_save_path", "predictions", "Path to where predictions will be saved"
+)
 
 
 def main(argv):
@@ -82,14 +84,14 @@ def main(argv):
     predict_dataloader = DataLoader(**predict_dataloader_kwargs)
 
     # Load trained model
-
+    prediction_save_path = FLAGS.prediction_save_path
     logger.info(f"Loading model from checkpoint: {model_path}")
     lightning_module = LightningModule.load_from_checkpoint(
         checkpoint_path=model_path,
         parameters=parameters,
         trajectory_length=predict_dataset.trajectory_length,
         timestep=predict_dataset.dt,
-        prediction_save_dir=FLAGS.prediction_output_path,
+        prediction_save_path=prediction_save_path,
     )
 
     # Initialize WandbLogger

@@ -45,7 +45,7 @@ class LightningModule(L.LightningModule):
         use_previous_data: bool = False,
         previous_data_start: int = None,
         previous_data_end: int = None,
-        prediction_save_dir: str = "predictions",
+        prediction_save_path: str = "predictions",
     ):
         """
         Initializes the LightningModule.
@@ -109,7 +109,7 @@ class LightningModule(L.LightningModule):
         self.trajectory_to_save: list[Batch] = []
 
         # Prediction
-        self.prediction_save_dir: str = prediction_save_dir
+        self.prediction_save_dir: str = prediction_save_path
         self.current_pred_trajectory = 0
         self.prediction_trajectory: list[Batch] = []
         self.last_pred_prediction = None
