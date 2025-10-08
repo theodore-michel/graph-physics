@@ -109,7 +109,7 @@ def main(argv):
 
     trainer = Trainer(
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        # logger=wandb_logger,
+        logger=False,  # wandb_logger,
         devices=1,
         inference_mode=True,
     )
