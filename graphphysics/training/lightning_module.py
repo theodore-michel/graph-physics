@@ -124,8 +124,14 @@ class LightningModule(L.LightningModule):
         network_output, target_delta_normalized, _ = self.model(batch)
 
         if self.is_multiloss:
-            network_output_physical = self.model.build_outputs(batch, network_output)
-            target_physical = self.model.build_outputs(batch, target_delta_normalized)
+            # compute phylosses only on velocity
+            # TODO: include a gradient pressure loss?
+            network_output_physical = self.model.build_outputs(batch, network_output)[
+                :, 0:2
+            ]
+            target_physical = self.model.build_outputs(batch, target_delta_normalized)[
+                :, 0:2
+            ]
             loss, train_losses = self.loss(
                 graph=batch,
                 target=target_delta_normalized,
