@@ -23,6 +23,8 @@ def build_features(graph: Data) -> Data:
     )
 
     # hide Vz in target
-    graph.y = graph.y[:, 0:2]
+    target_velocity = graph.y[:, 0:2]
+    target_pressure = graph.y[:, 3].unsqueeze(1)
+    graph.y = torch.cat((target_velocity, target_pressure), dim=1)
 
     return graph

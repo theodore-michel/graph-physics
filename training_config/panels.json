@@ -1,7 +1,7 @@
 {
     "dataset": {
         "extension": "xdmf",
-        "xdmf_folder": "dataset/train",
+        "xdmf_folder": "/scratch-big/tmichel/GNN/DATASETS/dataset_panels_3_Re3_mini/train",
         "meta_path": "dataset_config/panels_meta.json",
         "khop": 1,
         "new_edges_ratio": 0
@@ -11,7 +11,7 @@
         "message_passing_num": 15,
         "hidden_size": 128,
         "node_input_size": 7,
-        "output_size": 2,
+        "output_size": 3,
         "edge_input_size": 0,
         "num_heads": 4
     },
@@ -19,19 +19,19 @@
         "feature_index_start": 0,
         "feature_index_end": 7,
         "output_index_start": 0,
-        "output_index_end": 2,
+        "output_index_end": 3,
         "node_type_index": 7
     },
     "loss": {
-        "type": ["l2loss", "gradientl2loss", "convectionl2loss", "divergencel1loss"],
-        "weights": [1, 1e-2, 1e-4, 1e-1],
-        "gradient_method": "least_squares"
+        "type": ["l2loss", "gradientl2loss","convectionl2loss","divergencel2loss"],
+        "weights": [1.0, 1e-2, 1e-4, 1e-2],
+        "gradient_method": "finite_diff"
     },
     "transformations": {
         "preprocessing": {
-            "noise": [0.01],
-            "noise_index_start": [0],
-            "noise_index_end": [2],
+            "noise": [0.01,0.005],
+            "noise_index_start": [0,2],
+            "noise_index_end": [2,3],
             "masking": 0
         },
         "world_pos_parameters": {
