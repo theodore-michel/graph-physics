@@ -206,12 +206,12 @@ class LightningModule(L.LightningModule):
             f"Validation Trajectory {archive_filename.split('_')[-1]} saved at {save_dir}."
         )
         # The H5 archive is systematically created in cwd with original meshio library, we just need to move it
-        h5_filename = os.path.split(f"{xdmf_filename.replace('xdmf', 'h5')}")
-        if os.path.exists(os.path.join(os.getcwd(), h5_filename[1])):
+        h5_filename = f"{xdmf_filename.replace('xdmf', 'h5')}"
+        if os.path.exists(os.path.join(os.getcwd(), os.path.split(h5_filename)[1])):
             shutil.move(
                 src=os.path.join(
                     os.getcwd(),
-                    h5_filename[1],
+                    os.path.split(h5_filename)[1],
                 ),
                 dst=h5_filename,
             )
