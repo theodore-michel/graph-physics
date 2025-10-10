@@ -31,6 +31,7 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "prediction_save_path", "predictions", "Path to where predictions will be saved"
 )
+flags.DEFINE_bool("no_strict_load", False, "Whether to use strict loading of the model")
 
 
 def main(argv):
@@ -85,6 +86,8 @@ def main(argv):
 
     # Load trained model
     prediction_save_path = FLAGS.prediction_save_path
+    strict_load = not FLAGS.no_strict_load
+
     logger.info(f"Loading model from checkpoint: {model_path}")
     lightning_module = LightningModule.load_from_checkpoint(
         checkpoint_path=model_path,
@@ -92,6 +95,7 @@ def main(argv):
         trajectory_length=predict_dataset.trajectory_length,
         timestep=predict_dataset.dt,
         prediction_save_path=prediction_save_path,
+        strict=strict_load,
     )
 
     # Initialize WandbLogger
