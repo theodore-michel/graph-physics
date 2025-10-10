@@ -9,6 +9,7 @@ nohup.out
 .pytest_cache/
 .benchmarks/
 **/__pycache__/
+**/*.egg-info/
 
 .DS_Store
 .idea/
