@@ -233,7 +233,7 @@ class LightningModule(L.LightningModule):
                 batch.x[:, self.previous_data_start : self.previous_data_end] = (
                     last_previous_data_prediction.detach()
                 )
-        mask = build_mask(self.param, batch)
+        mask_v = build_mask(self.param, batch)
         target = batch.y
 
         current_output = batch.x[
@@ -244,7 +244,7 @@ class LightningModule(L.LightningModule):
             _, _, predicted_outputs = self.model(batch)
 
         # Apply mask to predicted outputs and update the last prediction
-        predicted_outputs[mask] = target[mask]
+        predicted_outputs[mask_v, :2] = target[mask_v, :2]  # apply BC velocity
         last_prediction = predicted_outputs
         if self.use_previous_data:
             last_previous_data_prediction = predicted_outputs - current_output
