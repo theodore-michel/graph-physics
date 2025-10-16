@@ -32,6 +32,7 @@ flags.DEFINE_string(
     "prediction_save_path", "predictions", "Path to where predictions will be saved"
 )
 flags.DEFINE_bool("no_strict_load", False, "Whether to use strict loading of the model")
+flags.DEFINE_bool("use_previous_data", False, "Whether to use previous data or not")
 
 
 def main(argv):
@@ -56,6 +57,7 @@ def main(argv):
     # wandb_project_name = FLAGS.project_name
     model_path = FLAGS.model_path
     use_edge_feature = not FLAGS.no_edge_feature
+    use_previous_data = FLAGS.use_previous_data
 
     # Build preprocessing function
     preprocessing = get_preprocessing(
@@ -71,7 +73,7 @@ def main(argv):
         param=parameters,
         preprocessing=preprocessing,
         use_edge_feature=use_edge_feature,
-        use_previous_data=True,
+        use_previous_data=use_previous_data,
     )
 
     predict_dataloader_kwargs = {
