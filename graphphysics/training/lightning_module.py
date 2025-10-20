@@ -31,6 +31,117 @@ def build_mask(param: dict, graph: Batch):
     return mask
 
 
+def compute_closest_wall_nodes(
+    nodetype: torch.Tensor,
+    pos: torch.Tensor,
+    wall_node_types: List[NodeType] = [
+        NodeType.WALL_BOUNDARY,
+        NodeType.OBSTACLE,
+        NodeType.INFLOW,
+    ],
+) -> torch.Tensor:
+    """
+    Computes for each node of the wall_node_types the index of the closest normal (flow) node.
+
+    Args:
+        nodetype (torch.Tensor): nodetype field of shape (N)
+        pos (torch.Tensor): tensor of mesh node xyz coordinates, of shape (N,3)
+        wall_node_types (List[NodeType]): list of NodeTypes to consider as wall nodes
+    Returns:
+        torch.Tensor: tensor of shape (N) indicating for node i which
+        wall node is closest (returns i if not wall node)
+    """
+    N = nodetype.shape[0]
+    closest_nodes = torch.arange(N, device=nodetype.device)
+
+    # wall/obstacle nodes
+    wall_mask = torch.zeros(N, dtype=torch.bool, device=nodetype.device)
+    for wt in wall_node_types:
+        wall_mask |= nodetype == wt
+    if not wall_mask.any():
+        return closest_nodes
+
+    # normal nodes
+    normal_mask = nodetype == NodeType.NORMAL
+    if not normal_mask.any():
+        return closest_nodes
+    normal_idx = torch.nonzero(normal_mask, as_tuple=False).view(-1)
+    wall_idx = torch.nonzero(wall_mask, as_tuple=False).view(-1)
+
+    # Compute spatial distances between wall nodes and normal nodes using positions
+    # wall_pos shape: (num_wall, 3), normal_pos shape: (num_normal, 3)
+    wall_pos = pos[wall_idx]  # (num_wall, 3)
+    normal_pos = pos[normal_idx]  # (num_normal, 3)
+
+    # Compute pairwise distances: (num_wall, num_normal)
+    distances = torch.cdist(wall_pos, normal_pos, p=2)
+    nearest_normal_pos = distances.argmin(dim=1)
+    selected_normal_idx = normal_idx[nearest_normal_pos]
+
+    closest_nodes[wall_idx] = selected_normal_idx
+
+    return closest_nodes
+
+
+def interp_pressure_surface(
+    pressure: torch.Tensor,
+    nodetype: torch.Tensor,
+    pos: torch.Tensor,
+    closest_nodes: torch.Tensor = None,
+    wall_node_types: List[NodeType] = [
+        NodeType.WALL_BOUNDARY,
+        NodeType.OBSTACLE,
+        NodeType.INFLOW,
+    ],
+) -> torch.Tensor:
+    """
+    Interpolates the pressure field from nodes of the first boundary layer to
+    the closest corresponding nodes on the wall (defined by wall_node_types).
+
+    Args:
+        pressure (torch.Tensor): pressure field of shape (N,1)
+        nodetype (torch.Tensor): nodetype field of shape (N,)
+        pos (torch.Tensor): tensor of mesh node xyz coordinates, of shape (N,3)
+        closest_nodes (torch.Tensor): indicates for node i which wall node is closest, shape (N,)
+        wall_node_types (List[NodeType]): list of NodeTypes to consider as wall nodes
+
+    Returns:
+        torch.Tensor: the new interpolated pressure field of shape (N,1)
+    """
+    # reshape pressure to (N,)
+    p = (
+        pressure.squeeze(-1)
+        if pressure.dim() > 1 and pressure.shape[1] == 1
+        else pressure.squeeze()
+    )
+    out = p.clone()
+
+    # wall/obstacle nodes
+    wall_mask = (
+        (nodetype == NodeType.OBSTACLE)
+        | (nodetype == NodeType.WALL_BOUNDARY)
+        | (nodetype == NodeType.INFLOW)
+    )
+    if not wall_mask.any():
+        return pressure
+
+    # which wall nodes (as idx)
+    wall_idx = torch.nonzero(wall_mask, as_tuple=False).view(-1)
+
+    # compute closest nodes mapping if not provided
+    if closest_nodes is None:
+        closest_nodes = compute_closest_wall_nodes(
+            nodetype=nodetype, pos=pos, wall_node_types=wall_node_types
+        )
+    # replace wall nodes by closest nodes pressure
+    selected_normal_idx = closest_nodes[wall_idx]
+    out[wall_idx] = p[selected_normal_idx]
+
+    # reshape pressure to (N,1)
+    out = out.unsqueeze(-1) if pressure.dim() > 1 and pressure.shape[1] == 1 else out
+    return out
+
+
 class LightningModule(L.LightningModule):
     def __init__(
         self,
@@ -114,6 +225,7 @@ class LightningModule(L.LightningModule):
         self.prediction_trajectory: list[Batch] = []
         self.last_pred_prediction = None
         self.last_previous_data_pred_prediction = None
+        self.closest_nodes = None
 
     def forward(self, graph: Batch):
         return self.model(graph)
@@ -244,7 +356,21 @@ class LightningModule(L.LightningModule):
             _, _, predicted_outputs = self.model(batch)
 
         # Apply mask to predicted outputs and update the last prediction
-        predicted_outputs[mask_v, :2] = target[mask_v, :2]  # apply BC velocity
+        # apply BC velocity (keep target velocity on non-normal nodes)
+        predicted_outputs[mask_v, :2] = target[mask_v, :2]
+        # apply BC pressure (interp to wall nodes from closest neighbors)
+        predicted_outputs[:, 2:3] = interp_pressure_surface(
+            pressure=predicted_outputs[:, 2:3],
+            nodetype=batch.x[:, self.model.node_type_index],
+            pos=batch.pos,
+            closest_nodes=self.closest_nodes,
+            wall_node_types=[
+                NodeType.WALL_BOUNDARY,
+                NodeType.OBSTACLE,
+                NodeType.INFLOW,
+            ],
+        )
+
         last_prediction = predicted_outputs
         if self.use_previous_data:
             last_previous_data_prediction = predicted_outputs - current_output
@@ -369,6 +495,7 @@ class LightningModule(L.LightningModule):
         self.prediction_trajectory = []
         self.last_pred_prediction = None
         self.last_previous_data_pred_prediction = None
+        self.closest_nodes = None
 
     def predict_step(self, batch: Batch):
         """
@@ -389,6 +516,15 @@ class LightningModule(L.LightningModule):
             )
             # reset
             self._reset_prediction_trajectory()
+            self.closest_nodes = compute_closest_wall_nodes(
+                nodetype=batch.x[:, self.model.node_type_index],
+                pos=batch.pos,
+                wall_node_types=[
+                    NodeType.WALL_BOUNDARY,
+                    NodeType.OBSTACLE,
+                    NodeType.INFLOW,
+                ],
+            )
 
         # predict
         (
