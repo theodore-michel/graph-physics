@@ -353,18 +353,18 @@ class LightningModule(L.LightningModule):
         # Apply mask to predicted outputs and update the last prediction
         # apply BC velocity (keep target velocity on non-normal nodes)
         predicted_outputs[mask_v, :2] = target[mask_v, :2]
-        # apply BC pressure (interp to wall nodes from closest neighbors)
-        predicted_outputs[:, 2:3] = interp_pressure_surface(
-            pressure=predicted_outputs[:, 2:3],
-            nodetype=batch.x[:, self.model.node_type_index],
-            pos=batch.pos,
-            closest_nodes=self.closest_nodes,
-            wall_node_types=[
-                NodeType.WALL_BOUNDARY,
-                NodeType.OBSTACLE,
-                NodeType.INFLOW,
-            ],
-        )
+        # # apply BC pressure (interp to wall nodes from closest neighbors)
+        # predicted_outputs[:, 2:3] = interp_pressure_surface(
+        #     pressure=predicted_outputs[:, 2:3],
+        #     nodetype=batch.x[:, self.model.node_type_index],
+        #     pos=batch.pos,
+        #     closest_nodes=self.closest_nodes,
+        #     wall_node_types=[
+        #         NodeType.WALL_BOUNDARY,
+        #         NodeType.OBSTACLE,
+        #         NodeType.INFLOW,
+        #     ],
+        # )
 
         last_prediction = predicted_outputs
         if self.use_previous_data:
@@ -511,15 +511,15 @@ class LightningModule(L.LightningModule):
             )
             # reset
             self._reset_prediction_trajectory()
-            self.closest_nodes = compute_closest_wall_nodes(
-                nodetype=batch.x[:, self.model.node_type_index],
-                pos=batch.pos,
-                wall_node_types=[
-                    NodeType.WALL_BOUNDARY,
-                    NodeType.OBSTACLE,
-                    NodeType.INFLOW,
-                ],
-            )
+            # self.closest_nodes = compute_closest_wall_nodes(
+            #     nodetype=batch.x[:, self.model.node_type_index],
+            #     pos=batch.pos,
+            #     wall_node_types=[
+            #         NodeType.WALL_BOUNDARY,
+            #         NodeType.OBSTACLE,
+            #         NodeType.INFLOW,
+            #     ],
+            # )
 
         # predict
         (
